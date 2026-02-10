@@ -63,6 +63,12 @@ window.ViewManager = {
 
         this._currentView = viewName;
 
+        // Show footer only on Feed view
+        var footer = document.getElementById('site-footer');
+        if (footer) {
+            footer.style.display = (viewName === 'feed') ? '' : 'none';
+        }
+
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
 

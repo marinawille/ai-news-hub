@@ -250,9 +250,19 @@ window.AnalyticsPage = {
             btn.addEventListener('click', function () {
                 var keyword = btn.getAttribute('data-keyword');
                 if (keyword && window.App) {
+                    // Reset filters so search spans all articles
+                    App._state.activeCategory = 'all';
+                    App._state.activeRecency = 'all';
                     App.filterBySearch(keyword);
+
+                    // Update UI to reflect reset filters
+                    if (window.UI) UI.setActiveTab('all');
                     var searchInput = document.getElementById('search-input');
                     if (searchInput) searchInput.value = keyword;
+
+                    // Sync sidebar if open
+                    if (window.SidebarService) SidebarService._syncActiveCategory();
+
                     if (window.ViewManager) ViewManager.showView('feed');
                 }
             });
@@ -274,8 +284,8 @@ window.AnalyticsPage = {
                 });
             }
 
-            // From title words
-            var words = (a.title || '').toLowerCase()
+            // From title and description words
+            var words = ((a.title || '') + ' ' + (a.description || '')).toLowerCase()
                 .replace(/[^\w\sáàãâéèêíìîóòõôúùûçñ-]/g, ' ')
                 .split(/\s+/);
 

@@ -29,7 +29,6 @@ window.SidebarService = {
         this._cacheElements();
         this._renderCategorySubmenu();
         this._renderSourcesSubmenu();
-        this._renderFooterSources();
         this._bindEvents();
         this._restoreState();
         this._syncActiveCategory();
@@ -108,20 +107,6 @@ window.SidebarService = {
         container.innerHTML = html;
     },
 
-    _renderFooterSources: function () {
-        var el = document.getElementById('footer-sources-list');
-        if (!el || !window.CONFIG) return;
-
-        var feeds = CONFIG.FEEDS || [];
-        var names = [];
-        for (var i = 0; i < feeds.length; i++) {
-            if (feeds[i].name && names.indexOf(feeds[i].name) === -1) {
-                names.push(feeds[i].name);
-            }
-        }
-        names.sort();
-        el.textContent = 'Fontes: ' + names.join(', ');
-    },
 
     _bindEvents: function () {
         var self = this;

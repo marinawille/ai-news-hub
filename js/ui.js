@@ -572,14 +572,39 @@ window.UI = {
         var nav = this._elements.categoryNav;
         nav.innerHTML = '';
 
+        var shortLabels = {
+            'all':                   'Tudo',
+            'pesquisa-papers':       'Pesquisa',
+            'bigtech-negocios':      'Big Tech',
+            'dev-opensource':         'Dev & OS',
+            'futuro-trabalho-etica': 'Futuro & \u00c9tica',
+            'visao-lider':           'Vis\u00e3o L\u00edder'
+        };
+
         var fragment = document.createDocumentFragment();
 
         CONFIG.CATEGORIES.forEach(function(cat, index) {
             var btn = document.createElement('button');
             btn.className = 'category-tab' + (index === 0 ? ' active' : '');
             btn.setAttribute('data-category', cat.id);
-            btn.textContent = cat.icon + ' ' + cat.label;
             btn.setAttribute('aria-label', 'Filtrar por ' + cat.label);
+
+            var iconSpan = document.createElement('span');
+            iconSpan.className = 'tab-icon';
+            iconSpan.textContent = cat.icon;
+            iconSpan.setAttribute('aria-hidden', 'true');
+
+            var fullSpan = document.createElement('span');
+            fullSpan.className = 'tab-label-full';
+            fullSpan.textContent = ' ' + cat.label;
+
+            var shortSpan = document.createElement('span');
+            shortSpan.className = 'tab-label-short';
+            shortSpan.textContent = ' ' + (shortLabels[cat.id] || cat.label);
+
+            btn.appendChild(iconSpan);
+            btn.appendChild(fullSpan);
+            btn.appendChild(shortSpan);
 
             btn.addEventListener('click', function() {
                 App.filterByCategory(cat.id);

@@ -181,7 +181,6 @@ window.App = {
 
         FeedService.fetchAllFeeds().then(function(result) {
             var articles = result.articles;
-            var failedFeeds = result.failedFeeds;
 
             if (articles.length === 0) {
                 // All feeds failed - try stale cache
@@ -232,12 +231,7 @@ window.App = {
                 UI.hideStaleWarning();
                 UI.updateTimestamp(new Date());
 
-                if (failedFeeds.length > 0) {
-                    UI.showToast(
-                        failedFeeds.length + ' fonte(s) indisponivel(is): ' + failedFeeds.join(', '),
-                        'info'
-                    );
-                } else if (!showLoadingState) {
+                if (!showLoadingState) {
                     // Smart toast: show how many new articles were found
                     var newCount = articles.length - previousCount;
                     if (newCount > 0) {
