@@ -14,6 +14,13 @@
     <header class="site-header">
         <div class="header-top">
             <div class="header-brand">
+                <button id="btn-sidebar-toggle" class="btn-sidebar-toggle" title="Menu" aria-label="Abrir menu lateral" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
                 <svg class="header-logo" viewBox="0 0 32 32" width="36" height="36" fill="none">
                     <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
                     <circle cx="16" cy="10" r="3" fill="currentColor"/>
@@ -35,6 +42,20 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input type="text" id="search-input" class="search-input" placeholder="Buscar noticias..." autocomplete="off">
+                </div>
+                <div id="auth-container" class="auth-container" style="display:none">
+                    <button id="btn-login" class="btn-login" title="Entrar com Google" aria-label="Fazer login">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span class="btn-login-text">Entrar</span>
+                    </button>
+                    <div id="user-menu" class="user-menu" style="display:none">
+                        <img id="user-avatar" class="user-avatar" src="" alt="" />
+                        <span id="user-name" class="user-name"></span>
+                        <button id="btn-logout" class="btn-logout" title="Sair" aria-label="Sair">Sair</button>
+                    </div>
                 </div>
                 <button id="btn-refresh" class="btn-icon" title="Atualizar noticias" aria-label="Atualizar noticias">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -62,61 +83,291 @@
         </div>
     </header>
 
-    <!-- Category Navigation -->
-    <nav id="category-nav" class="category-nav" aria-label="Filtrar por categoria"></nav>
+    <!-- Sidebar Backdrop -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Error Container -->
-        <div id="error-container" class="error-container" style="display:none"></div>
-
-        <!-- Stale Cache Warning -->
-        <div id="stale-warning" class="stale-warning" style="display:none">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <span>Exibindo noticias em cache. Ultima atualizacao: <strong id="stale-timestamp"></strong></span>
+    <!-- Left Side Menu -->
+    <nav id="side-menu" class="side-menu" aria-label="Menu de navegacao principal">
+        <div class="side-menu-header">
+            <div class="side-menu-brand">
+                <svg class="side-menu-logo" viewBox="0 0 32 32" width="28" height="28" fill="none">
+                    <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                    <circle cx="16" cy="10" r="3" fill="currentColor"/>
+                    <circle cx="10" cy="20" r="2.5" fill="currentColor" opacity="0.7"/>
+                    <circle cx="22" cy="20" r="2.5" fill="currentColor" opacity="0.7"/>
+                    <line x1="16" y1="13" x2="10" y2="17.5" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="16" y1="13" x2="22" y2="17.5" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                </svg>
+                <span class="side-menu-brand-text">AI News Hub</span>
+            </div>
+            <button id="btn-side-menu-collapse" class="btn-side-menu-collapse" title="Recolher menu" aria-label="Recolher menu">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+            </button>
         </div>
 
-        <!-- Loading Skeleton -->
-        <div id="loading-skeleton" class="news-grid" style="display:none">
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-            <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
-        </div>
+        <ul class="side-menu-nav">
+            <li class="side-menu-item" data-section="executive-summary">
+                <button class="side-menu-link" title="Resumo Executivo — Destaques da IA nas ultimas 24h">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    <span class="side-menu-text">Resumo Executivo</span>
+                </button>
+            </li>
 
-        <!-- News Grid -->
-        <div id="news-grid" class="news-grid"></div>
+            <li class="side-menu-item" data-section="market-sentiment">
+                <button class="side-menu-link" title="Sentimento do Mercado — Analise de humor dos dados">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    <span class="side-menu-text">Sentimento do Mercado</span>
+                </button>
+            </li>
 
-        <!-- Empty State -->
-        <div id="empty-state" class="empty-state" style="display:none">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <p>Nenhuma noticia encontrada</p>
+            <li class="side-menu-item active" data-section="feed">
+                <button class="side-menu-link" title="Feed de Noticias — Lista geral cronologica">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1"/>
+                        <rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/>
+                        <rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                    <span class="side-menu-text">Feed de Noticias</span>
+                </button>
+            </li>
+
+            <li class="side-menu-item side-menu-dropdown" data-section="categories">
+                <button class="side-menu-link side-menu-dropdown-toggle" title="Categorias — Filtros por Pesquisa, Big Tech, etc.">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="side-menu-text">Categorias</span>
+                    <svg class="side-menu-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+                <ul class="side-menu-submenu" id="side-menu-categories"></ul>
+            </li>
+
+            <li class="side-menu-item side-menu-dropdown" data-section="sources">
+                <button class="side-menu-link side-menu-dropdown-toggle" title="Fontes — Portais e especialistas monitorados" aria-expanded="false">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <span class="side-menu-text">Fontes</span>
+                    <svg class="side-menu-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+                <div class="side-menu-submenu" id="side-menu-sources"></div>
+            </li>
+        </ul>
+
+        <div class="side-menu-separator"></div>
+
+        <ul class="side-menu-nav side-menu-footer-nav">
+            <li class="side-menu-item" data-section="settings">
+                <button class="side-menu-link" title="Configuracoes">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span class="side-menu-text">Configuracoes</span>
+                </button>
+            </li>
+
+            <li class="side-menu-item" data-section="profile">
+                <button class="side-menu-link" title="Perfil do Usuario">
+                    <svg class="side-menu-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span class="side-menu-text">Perfil</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="side-menu-disclaimer">
+            <p class="side-menu-disclaimer-text">Hub agregador de informa&ccedil;&otilde;es. N&atilde;o copiamos conte&uacute;dos &mdash; todas as not&iacute;cias direcionam para a fonte original.</p>
         </div>
-    </main>
+    </nav>
+
+    <!-- ===== Feed View ===== -->
+    <div id="feed-view" class="view-container">
+        <!-- Category Navigation -->
+        <nav id="category-nav" class="category-nav" aria-label="Filtrar por categoria"></nav>
+
+        <!-- Recency Filter -->
+        <nav id="recency-nav" class="recency-nav" aria-label="Filtrar por recencia"></nav>
+
+        <!-- Layout Wrapper -->
+        <div class="layout-wrapper">
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Error Container -->
+                <div id="error-container" class="error-container" style="display:none"></div>
+
+                <!-- Stale Cache Warning -->
+                <div id="stale-warning" class="stale-warning" style="display:none">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>Exibindo noticias em cache. Ultima atualizacao: <strong id="stale-timestamp"></strong></span>
+                </div>
+
+                <!-- Loading Skeleton -->
+                <div id="loading-skeleton" class="news-grid" style="display:none">
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w75"></div></div></div>
+                </div>
+
+                <!-- News Grid -->
+                <div id="news-grid" class="news-grid"></div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display:none">
+                    <div class="empty-state-icon">
+                        <svg viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                            <rect x="8" y="8" width="48" height="48" rx="8"/>
+                            <line x1="20" y1="24" x2="44" y2="24"/>
+                            <line x1="20" y1="32" x2="38" y2="32"/>
+                            <line x1="20" y1="40" x2="32" y2="40"/>
+                        </svg>
+                    </div>
+                    <h3 id="empty-state-title" class="empty-state-title">Nenhuma noticia encontrada</h3>
+                    <p id="empty-state-message" class="empty-state-message"></p>
+                    <button id="empty-state-action" class="empty-state-action" style="display:none"></button>
+                </div>
+
+                <!-- Lazy Load Sentinel -->
+                <div id="lazy-sentinel" class="lazy-sentinel" style="display:none">
+                    <div class="lazy-spinner"></div>
+                    <span>Carregando mais noticias...</span>
+                </div>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- ===== Analytics View (Resumo Executivo) ===== -->
+    <div id="analytics-view" class="view-container" style="display:none">
+        <div class="analytics-container">
+            <section id="analytics-most-read" class="analytics-section" aria-label="Noticias mais lidas"></section>
+            <div class="analytics-row">
+                <section id="analytics-topic-cloud" class="analytics-section" aria-label="Nuvem de topicos"></section>
+                <section id="analytics-radar" class="analytics-section" aria-label="Radar de momentum"></section>
+            </div>
+
+            <section id="analytics-leaderboard" class="analytics-section" aria-label="AI Leaderboard"></section>
+        </div>
+    </div>
+
+    <!-- ===== Sentiment View (Streamgraph) ===== -->
+    <div id="sentiment-view" class="view-container" style="display:none">
+        <div class="streamgraph-container">
+            <!-- Header -->
+            <div class="streamgraph-header">
+                <h2 class="streamgraph-title">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Barometro de Humor da IA
+                </h2>
+                <p class="streamgraph-subtitle">A espessura de cada camada representa o volume de noticias com aquele sentimento ao longo do tempo</p>
+            </div>
+
+            <!-- Time Filter Bar -->
+            <div class="streamgraph-filters">
+                <button class="streamgraph-filter-btn" data-range="3d">3 Dias</button>
+                <button class="streamgraph-filter-btn active" data-range="7d">7 Dias</button>
+                <button class="streamgraph-filter-btn" data-range="30d">30 Dias</button>
+                <button class="streamgraph-filter-btn" data-range="custom">Personalizado</button>
+                <div class="streamgraph-custom-range" id="sg-custom-range" style="display:none">
+                    <input type="date" id="sg-date-start" class="streamgraph-date-input">
+                    <span class="streamgraph-date-sep">ate</span>
+                    <input type="date" id="sg-date-end" class="streamgraph-date-input">
+                    <button class="streamgraph-apply-btn" id="sg-apply-custom">Aplicar</button>
+                </div>
+            </div>
+
+            <!-- Legend (ordered top-to-bottom: positive, neutral, negative) -->
+            <div class="streamgraph-legend">
+                <span class="streamgraph-legend-item">
+                    <span class="streamgraph-legend-pos">&#9650;</span>
+                    <span class="streamgraph-legend-dot" style="background:#BCCA24"></span>
+                    Positivo (topo)
+                </span>
+                <span class="streamgraph-legend-item">
+                    <span class="streamgraph-legend-dot" style="background:#4ECDC4"></span>
+                    Neutro (meio)
+                </span>
+                <span class="streamgraph-legend-item">
+                    <span class="streamgraph-legend-pos">&#9660;</span>
+                    <span class="streamgraph-legend-dot" style="background:#E0442F"></span>
+                    Negativo (base)
+                </span>
+            </div>
+
+            <!-- SVG Container -->
+            <div class="streamgraph-chart" id="streamgraph-chart"></div>
+
+            <!-- Tooltip -->
+            <div class="streamgraph-tooltip" id="streamgraph-tooltip" style="display:none"></div>
+
+            <!-- Summary Stats -->
+            <div class="streamgraph-stats" id="streamgraph-stats"></div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="site-footer">
         <p>AI News Hub &mdash; Agregador de noticias sobre Inteligencia Artificial</p>
-        <p class="footer-sources">Fontes: OpenAI, TechCrunch, The Verge, MIT Technology Review, ArXiv, Wired, Ars Technica, Google AI, Anthropic</p>
+        <p class="footer-sources" id="footer-sources-list"></p>
+        <div class="footer-disclaimer">
+            <p>Este site atua estritamente como um hub agregador de informa&ccedil;&otilde;es. N&atilde;o realizamos c&oacute;pia integral de conte&uacute;dos. Todas as not&iacute;cias exibem a fonte original de forma clara e direcionam o usu&aacute;rio via link direto para o ve&iacute;culo publicador. O objetivo deste projeto &eacute; a curadoria de dados para fins informativos e educacionais.</p>
+        </div>
         <p class="footer-note">Conteudo obtido de feeds RSS publicos. Clique nos cards para ler a noticia completa na fonte original.</p>
     </footer>
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Scripts (ordem importa: config -> feeds -> ui -> app) -->
+    <!-- Firebase SDK (compat mode for no-build-tools) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <!-- Chart.js for analytics visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2/dist/chartjs-chart-treemap.min.js"></script>
+
+    <!-- D3.js for streamgraph visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+    <!-- Scripts (ordem importa: config -> auth -> votes -> feeds -> ui -> views -> sentiment -> analytics -> streamgraph -> sidebar -> app) -->
     <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/votes.js"></script>
     <script src="js/feeds.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/views.js"></script>
+    <script src="js/sentiment.js"></script>
+    <script src="js/analytics.js"></script>
+    <script src="js/streamgraph.js"></script>
+    <script src="js/sidebar.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

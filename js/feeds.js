@@ -277,15 +277,229 @@ window.FeedService = {
         return this.parseRss(xmlString, feedMeta);
     },
 
+    // -----------------------------------------------
+    // Legacy Twitter methods (kept for backward compat)
+    // -----------------------------------------------
+
     /**
-     * Fetches all configured feeds in parallel.
+     * Builds the RSS URL for a Twitter/X account based on the configured bridge.
+     * DEPRECATED: Use the cascade system (SOCIAL_ACCOUNTS) instead.
+     */
+    getTwitterRssUrl: function(handle) {
+        var bridge = CONFIG.TWITTER_RSS_BRIDGE || 'rsshub';
+        switch (bridge) {
+            case 'nitter':
+                return 'https://nitter.privacydev.net/' + handle + '/rss';
+            case 'rssbridge':
+                return 'https://rss-bridge.org/bridge01/?action=display&bridge=TwitterBridge&context=By+username&u=' + handle + '&norep=on&noretweet=on&format=Atom';
+            case 'custom':
+                if (typeof CONFIG.TWITTER_RSS_CUSTOM_FN === 'function') {
+                    return CONFIG.TWITTER_RSS_CUSTOM_FN(handle);
+                }
+                console.warn('[AI News Hub] TWITTER_RSS_CUSTOM_FN not configured, falling back to rsshub');
+                return 'https://rsshub.app/twitter/user/' + handle;
+            case 'rsshub':
+            default:
+                return 'https://rsshub.app/twitter/user/' + handle;
+        }
+    },
+
+    /**
+     * Converts TWITTER_ACCOUNTS config into feed objects.
+     * DEPRECATED: Use fetchSocialFeeds() instead.
+     */
+    getTwitterFeeds: function() {
+        var self = this;
+        var accounts = CONFIG.TWITTER_ACCOUNTS || [];
+        return accounts.map(function(account) {
+            return {
+                name: account.name + ' (X)',
+                url: self.getTwitterRssUrl(account.handle),
+                type: 'rss',
+                defaultCategory: account.category || 'bigtech-negocios',
+                language: 'en'
+            };
+        });
+    },
+
+    // -----------------------------------------------
+    // Social Media Cascade System (RSSHub -> Bluesky -> Nitter)
+    // -----------------------------------------------
+
+    /**
+     * Builds RSS URL via self-hosted RSSHub.
+     */
+    getRsshubUrl: function(twitterHandle) {
+        var base = (CONFIG.RSSHUB_BASE_URL || 'https://rsshub.app').replace(/\/+$/, '');
+        return base + '/twitter/user/' + twitterHandle;
+    },
+
+    /**
+     * Builds RSS URL for a Bluesky account (native RSS, free).
+     * Returns null if handle is falsy.
+     */
+    getBlueskyRssUrl: function(blueskyHandle) {
+        if (!blueskyHandle) return null;
+        return 'https://bsky.app/profile/' + blueskyHandle + '/rss';
+    },
+
+    /**
+     * Builds an array of Nitter RSS URLs (one per configured instance).
+     */
+    getNitterUrls: function(twitterHandle) {
+        var instances = CONFIG.NITTER_INSTANCES || ['https://nitter.privacydev.net'];
+        var urls = [];
+        for (var i = 0; i < instances.length; i++) {
+            var base = instances[i].replace(/\/+$/, '');
+            urls.push(base + '/' + twitterHandle + '/rss');
+        }
+        return urls;
+    },
+
+    /**
+     * Fetches a single social account using cascading fallback.
+     * Tries each source in SOCIAL_CASCADE_STRATEGY order.
+     * Within Nitter, tries each instance in order.
+     * Returns Promise<{ feed, articles, error? }>
+     */
+    fetchSocialFeedWithCascade: function(account) {
+        var self = this;
+        var strategy = CONFIG.SOCIAL_CASCADE_STRATEGY || ['rsshub', 'bluesky', 'nitter'];
+        var feedMeta = {
+            name: account.name + ' (Social)',
+            type: 'rss',
+            defaultCategory: account.category || 'bigtech-negocios',
+            language: 'en'
+        };
+
+        // Build ordered list of URLs to attempt
+        var attempts = [];
+        for (var s = 0; s < strategy.length; s++) {
+            var source = strategy[s];
+            if (source === 'rsshub' && account.twitterHandle) {
+                attempts.push({ url: self.getRsshubUrl(account.twitterHandle), label: 'RSSHub' });
+            } else if (source === 'bluesky' && account.blueskyHandle) {
+                var bskyUrl = self.getBlueskyRssUrl(account.blueskyHandle);
+                // Try direct fetch first (bsky.app may support CORS natively)
+                attempts.push({ url: bskyUrl, label: 'Bluesky', direct: true });
+                // Then try via CORS proxy as fallback
+                attempts.push({ url: bskyUrl, label: 'Bluesky-proxy' });
+            } else if (source === 'nitter' && account.twitterHandle) {
+                var nitterUrls = self.getNitterUrls(account.twitterHandle);
+                for (var n = 0; n < nitterUrls.length; n++) {
+                    attempts.push({ url: nitterUrls[n], label: 'Nitter#' + (n + 1) });
+                }
+            }
+        }
+
+        if (attempts.length === 0) {
+            return Promise.resolve({ feed: feedMeta, articles: [], error: 'No handles configured' });
+        }
+
+        function tryNext(index) {
+            if (index >= attempts.length) {
+                console.warn('[AI News Hub] All cascade sources failed for ' + account.name);
+                return Promise.resolve({ feed: feedMeta, articles: [], error: 'All sources failed' });
+            }
+
+            var attempt = attempts[index];
+            var fetchPromise = attempt.direct
+                ? self.fetchWithTimeout(attempt.url)
+                : self.fetchFeedXml(attempt.url);
+            return fetchPromise
+                .then(function(xml) {
+                    var articles = self.parseFeed(xml, feedMeta);
+                    if (articles.length === 0) {
+                        console.info('[AI News Hub] ' + attempt.label + ' returned 0 items for ' + account.name + ', trying next...');
+                        return tryNext(index + 1);
+                    }
+                    feedMeta.name = account.name + ' (' + attempt.label + ')';
+                    for (var i = 0; i < articles.length; i++) {
+                        articles[i].source = feedMeta.name;
+                    }
+                    console.info('[AI News Hub] Fetched ' + articles.length + ' items for ' + account.name + ' via ' + attempt.label);
+                    return { feed: feedMeta, articles: articles };
+                })
+                .catch(function(err) {
+                    console.info('[AI News Hub] ' + attempt.label + ' failed for ' + account.name + ': ' + err.message + ', trying next...');
+                    return tryNext(index + 1);
+                });
+        }
+
+        return tryNext(0);
+    },
+
+    /**
+     * Fetches all SOCIAL_ACCOUNTS using cascade fallback.
+     * Falls back to legacy TWITTER_ACCOUNTS if SOCIAL_ACCOUNTS is empty.
+     * Returns Promise<{ articles, failedFeeds }>
+     */
+    fetchSocialFeeds: function() {
+        var self = this;
+        var accounts = CONFIG.SOCIAL_ACCOUNTS || [];
+
+        // Backward compat: use legacy TWITTER_ACCOUNTS if no SOCIAL_ACCOUNTS
+        if (accounts.length === 0) {
+            var legacyFeeds = this.getTwitterFeeds();
+            if (legacyFeeds.length === 0) {
+                return Promise.resolve({ articles: [], failedFeeds: [] });
+            }
+            var legacyPromises = legacyFeeds.map(function(feed) {
+                return self.fetchFeedXml(feed.url)
+                    .then(function(xml) {
+                        return { feed: feed, articles: self.parseFeed(xml, feed) };
+                    })
+                    .catch(function(err) {
+                        return { feed: feed, articles: [], error: err.message };
+                    });
+            });
+            return Promise.allSettled(legacyPromises).then(function(results) {
+                var articles = [];
+                var failed = [];
+                results.forEach(function(r) {
+                    if (r.status === 'fulfilled') {
+                        if (r.value.error) failed.push(r.value.feed.name);
+                        else articles = articles.concat(r.value.articles);
+                    }
+                });
+                return { articles: articles, failedFeeds: failed };
+            });
+        }
+
+        // Cascade: all accounts in parallel, each account tries sources sequentially
+        var promises = accounts.map(function(account) {
+            return self.fetchSocialFeedWithCascade(account);
+        });
+
+        return Promise.allSettled(promises).then(function(results) {
+            var allArticles = [];
+            var failedFeeds = [];
+            results.forEach(function(result) {
+                if (result.status === 'fulfilled') {
+                    var data = result.value;
+                    if (data.error) {
+                        failedFeeds.push(data.feed.name);
+                    } else {
+                        allArticles = allArticles.concat(data.articles);
+                    }
+                } else {
+                    failedFeeds.push('unknown social');
+                }
+            });
+            return { articles: allArticles, failedFeeds: failedFeeds };
+        });
+    },
+
+    /**
+     * Fetches all configured feeds (RSS + social) in parallel.
      * Returns { articles: [...], failedFeeds: [...] }
      */
     fetchAllFeeds: function() {
         var self = this;
-        var feeds = CONFIG.FEEDS;
+        var rssFeeds = CONFIG.FEEDS;
 
-        var promises = feeds.map(function(feed) {
+        // Fetch regular RSS feeds
+        var rssPromises = rssFeeds.map(function(feed) {
             return self.fetchFeedXml(feed.url)
                 .then(function(xml) {
                     return { feed: feed, articles: self.parseFeed(xml, feed) };
@@ -296,11 +510,21 @@ window.FeedService = {
                 });
         });
 
-        return Promise.allSettled(promises).then(function(results) {
+        // Fetch social feeds with cascade (runs in parallel with RSS feeds)
+        var socialPromise = self.fetchSocialFeeds();
+
+        return Promise.all([
+            Promise.allSettled(rssPromises),
+            socialPromise
+        ]).then(function(results) {
+            var rssResults = results[0];
+            var socialResult = results[1];
+
             var allArticles = [];
             var failedFeeds = [];
 
-            results.forEach(function(result) {
+            // Process RSS results
+            rssResults.forEach(function(result) {
                 if (result.status === 'fulfilled') {
                     var data = result.value;
                     if (data.error) {
@@ -312,6 +536,10 @@ window.FeedService = {
                     failedFeeds.push('unknown');
                 }
             });
+
+            // Merge social results
+            allArticles = allArticles.concat(socialResult.articles);
+            failedFeeds = failedFeeds.concat(socialResult.failedFeeds);
 
             return {
                 articles: allArticles,
