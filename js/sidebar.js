@@ -192,6 +192,7 @@ window.SidebarService = {
         });
 
         var menu = this._elements.sideMenu;
+        if (this._state.isExpanded) {
             menu.classList.add('expanded');
             document.body.classList.add('sidebar-expanded');
         } else {
