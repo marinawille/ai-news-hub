@@ -185,9 +185,13 @@ window.SidebarService = {
 
     toggleExpanded: function () {
         this._state.isExpanded = !this._state.isExpanded;
-        var menu = this._elements.sideMenu;
 
-        if (this._state.isExpanded) {
+        if (window.GA) GA.logEvent('sidebar_toggle', {
+            action: this._state.isExpanded ? 'expand' : 'collapse',
+            device: 'desktop'
+        });
+
+        var menu = this._elements.sideMenu;
             menu.classList.add('expanded');
             document.body.classList.add('sidebar-expanded');
         } else {
@@ -207,6 +211,7 @@ window.SidebarService = {
     },
 
     openMobile: function () {
+        if (window.GA) GA.logEvent('sidebar_toggle', { action: 'open', device: 'mobile' });
         this._state.isOpen = true;
         this._elements.sideMenu.classList.add('open');
         this._elements.backdrop.classList.add('visible');
@@ -215,6 +220,7 @@ window.SidebarService = {
     },
 
     closeMobile: function () {
+        if (window.GA) GA.logEvent('sidebar_toggle', { action: 'close', device: 'mobile' });
         this._state.isOpen = false;
         this._elements.sideMenu.classList.remove('open');
         this._elements.backdrop.classList.remove('visible');
@@ -276,6 +282,8 @@ window.SidebarService = {
     },
 
     _onSectionClick: function (section) {
+        if (window.GA) GA.logEvent('sidebar_section_click', { section: section });
+
         switch (section) {
             case 'feed':
                 this._setActiveSection('feed');

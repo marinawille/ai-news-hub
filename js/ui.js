@@ -327,10 +327,31 @@ window.UI = {
                 '</div>' +
             '</div>';
 
+        // Track article clicks (CTA button)
+        var ctaEl = card.querySelector('.card-cta');
+        if (ctaEl) {
+            ctaEl.addEventListener('click', function () {
+                if (window.GA) GA.logEvent('article_click', {
+                    article_id: article.id,
+                    article_title: (article.title || '').substring(0, 100),
+                    article_source: article.source || '',
+                    article_category: article.category || '',
+                    click_target: 'cta_button'
+                });
+            });
+        }
+
         // Make the card title clickable as well
         var titleEl = card.querySelector('.card-title');
         if (titleEl) {
             titleEl.addEventListener('click', function() {
+                if (window.GA) GA.logEvent('article_click', {
+                    article_id: article.id,
+                    article_title: (article.title || '').substring(0, 100),
+                    article_source: article.source || '',
+                    article_category: article.category || '',
+                    click_target: 'title'
+                });
                 window.open(article.url, '_blank', 'noopener,noreferrer');
             });
             titleEl.style.cursor = 'pointer';
@@ -687,6 +708,11 @@ window.UI = {
         var currentTheme = body.getAttribute('data-theme');
         var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         body.setAttribute('data-theme', newTheme);
+
+        if (window.GA) {
+            GA.logEvent('theme_toggle', { new_theme: newTheme });
+            GA.setUserProperty('preferred_theme', newTheme);
+        }
 
         try {
             localStorage.setItem(CONFIG.SETTINGS.cacheKeyTheme, newTheme);

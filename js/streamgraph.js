@@ -81,6 +81,8 @@ window.StreamGraph = {
                 buttons.forEach(function (b) { b.classList.remove('active'); });
                 btn.classList.add('active');
 
+                if (window.GA) GA.logEvent('streamgraph_filter', { range: range });
+
                 if (range === 'custom') {
                     self._showCustomRange();
                 } else {

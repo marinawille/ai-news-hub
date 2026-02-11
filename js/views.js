@@ -45,6 +45,15 @@ window.ViewManager = {
         if (!this._views[viewName]) return;
         if (this._currentView === viewName) return;
 
+        // Track engagement time on the view being left
+        if (window.GA) {
+            GA.logViewEngagement(this._currentView);
+            GA.logEvent('view_switch', {
+                from_view: this._currentView,
+                to_view: viewName
+            });
+        }
+
         var self = this;
 
         // Hide all view containers
@@ -62,6 +71,9 @@ window.ViewManager = {
         }
 
         this._currentView = viewName;
+
+        // Log virtual page view for the new view
+        if (window.GA) GA.logPageView(viewName);
 
         // Show footer only on Feed view
         var footer = document.getElementById('site-footer');

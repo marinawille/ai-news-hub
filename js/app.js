@@ -35,6 +35,7 @@ window.App = {
 
         // Firebase/Auth/Votes
         firebase.initializeApp(CONFIG.FIREBASE);
+        if (window.GA) GA.init();
         Auth.init();
         VoteService.init();
 
@@ -42,11 +43,18 @@ window.App = {
             self._state.currentUser = user;
             if (user) {
                 UI.showUserMenu(user);
+                if (window.GA) {
+                    GA.setUserId(user.uid);
+                    GA.logEvent('login', { method: 'google' });
+                }
                 VoteService.loadUserVotes(user.uid).then(function() {
                     UI.refreshAllVoteStates();
                 });
             } else {
                 UI.showLoginButton();
+                if (window.GA) {
+                    GA.setUserId(null);
+                }
                 VoteService.clearUserVotes();
                 UI.refreshAllVoteStates();
             }
@@ -193,8 +201,10 @@ window.App = {
                     UI.hideLoading();
                     UI.showStaleWarning(stale.timestamp);
                     UI.showToast('Nao foi possivel atualizar. Exibindo cache.', 'error');
+                    if (window.GA) GA.logEvent('feed_error', { error_type: 'all_feeds_failed_stale_cache' });
                 } else {
                     // Total failure, no cache
+                    if (window.GA) GA.logEvent('feed_error', { error_type: 'all_feeds_failed_no_cache' });
                     UI.showError(
                         'Nao foi possivel carregar as noticias. Verifique sua conexao com a internet e tente novamente.',
                         true
@@ -231,6 +241,11 @@ window.App = {
                 UI.hideStaleWarning();
                 UI.updateTimestamp(new Date());
 
+                if (window.GA) GA.logEvent('feed_refresh_complete', {
+                    trigger: showLoadingState ? 'initial' : 'background',
+                    article_count: articles.length
+                });
+
                 if (!showLoadingState) {
                     // Smart toast: show how many new articles were found
                     var newCount = articles.length - previousCount;
@@ -247,6 +262,7 @@ window.App = {
 
         }).catch(function(err) {
             console.error('[AI News Hub] Unexpected error:', err);
+            if (window.GA) GA.logEvent('feed_error', { error_type: 'unexpected' });
             self._state.isLoading = false;
             UI.setRefreshing(false);
             UI.hideLoading();
@@ -477,6 +493,11 @@ window.App = {
         this._saveFilterPrefs();
         this.applyFilters();
 
+        if (window.GA) GA.logEvent('category_filter', {
+            category_id: categoryId,
+            article_count: this._state.filteredArticles.length
+        });
+
         if (window.SidebarService) {
             SidebarService._syncActiveCategory();
         }
@@ -493,6 +514,8 @@ window.App = {
         this._state.activeRecency = recencyId;
         UI.setActiveRecencyTab(recencyId);
         this._saveFilterPrefs();
+
+        if (window.GA) GA.logEvent('recency_filter', { recency_id: recencyId });
 
         if (recencyId === 'popular') {
             VoteService.getPopularArticleIds(CONFIG.SETTINGS.votePopularHours).then(function(results) {
@@ -577,6 +600,10 @@ window.App = {
     filterBySearch: function(query) {
         this._state.searchQuery = query;
         this.applyFilters();
+
+        if (window.GA && query && query.trim().length > 0) {
+            GA.logEvent('search', { search_term: query.trim().substring(0, 100) });
+        }
     },
 
     // ==========================================
@@ -625,6 +652,10 @@ window.App = {
             UI.updateVoteCount(articleId, result.newCount);
             UI.setVoteActive(articleId, result.voted);
             UI.animateVote(articleId);
+            if (window.GA) GA.logEvent('article_vote', {
+                article_id: articleId,
+                action: result.voted ? 'upvote' : 'remove_vote'
+            });
         }).catch(function(err) {
             if (err.message === 'RATE_LIMITED') {
                 UI.showToast('Aguarde um momento antes de votar novamente.', 'info');
@@ -663,6 +694,7 @@ window.App = {
 
         // Refresh button (smart: background refresh, no skeleton if content exists)
         UI._elements.btnRefresh.addEventListener('click', function() {
+            if (window.GA) GA.logEvent('feed_refresh', { trigger: 'manual' });
             var hasContent = self._state.allArticles.length > 0;
             self.refreshFeeds(!hasContent);
         });
