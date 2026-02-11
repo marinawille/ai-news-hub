@@ -549,10 +549,11 @@ window.CONFIG = {
     SETTINGS: {
         refreshIntervalMs: 15 * 60 * 1000,  // 15 minutes
         cacheTtlMs: 15 * 60 * 1000,          // 15 minutes
-        maxArticlesPerFeed: 30,
+        maxArticlesPerFeed: 15,
         maxTotalArticles: 400,
         searchDebounceMs: 300,
-        fetchTimeoutMs: 10000,               // 10 seconds per fetch
+        fetchTimeoutMs: 5000,                // 5 seconds per fetch
+        feedConcurrency: 6,                  // max simultaneous feed fetches
         cacheKeyArticles: 'ainewshub_articles',
         cacheKeyTimestamp: 'ainewshub_timestamp',
         cacheKeyTheme: 'ainewshub_theme',

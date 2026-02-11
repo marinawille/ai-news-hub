@@ -74,8 +74,8 @@ window.App = {
             UI.updateTimestamp(new Date(cached.timestamp));
             UI.hideStaleWarning();
 
-            // Background refresh (no loading skeleton)
-            self.refreshFeeds(false);
+            // Delayed background refresh (30s) — avoids blocking initial render
+            setTimeout(function() { self.refreshFeeds(false); }, 30000);
         } else {
             // First load: show skeleton
             self.refreshFeeds(true);

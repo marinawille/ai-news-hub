@@ -491,30 +491,72 @@ window.FeedService = {
     },
 
     /**
-     * Fetches all configured feeds (RSS + social) in parallel.
+     * Runs an array of promise-returning functions with limited concurrency.
+     * At most `limit` tasks run at the same time.
+     * Returns Promise<Array<{ status, value?, reason? }>> (allSettled style).
+     */
+    _runWithConcurrency: function(tasks, limit) {
+        var results = new Array(tasks.length);
+        var running = 0;
+        var nextIndex = 0;
+
+        return new Promise(function(resolve) {
+            function startNext() {
+                while (running < limit && nextIndex < tasks.length) {
+                    (function(i) {
+                        running++;
+                        tasks[i]()
+                            .then(function(value) {
+                                results[i] = { status: 'fulfilled', value: value };
+                            })
+                            .catch(function(reason) {
+                                results[i] = { status: 'rejected', reason: reason };
+                            })
+                            .then(function() {
+                                running--;
+                                if (nextIndex >= tasks.length && running === 0) {
+                                    resolve(results);
+                                } else {
+                                    startNext();
+                                }
+                            });
+                    })(nextIndex);
+                    nextIndex++;
+                }
+            }
+            if (tasks.length === 0) return resolve(results);
+            startNext();
+        });
+    },
+
+    /**
+     * Fetches all configured feeds (RSS + social) with limited concurrency.
      * Returns { articles: [...], failedFeeds: [...] }
      */
     fetchAllFeeds: function() {
         var self = this;
         var rssFeeds = CONFIG.FEEDS;
+        var concurrency = CONFIG.SETTINGS.feedConcurrency || 6;
 
-        // Fetch regular RSS feeds
-        var rssPromises = rssFeeds.map(function(feed) {
-            return self.fetchFeedXml(feed.url)
-                .then(function(xml) {
-                    return { feed: feed, articles: self.parseFeed(xml, feed) };
-                })
-                .catch(function(err) {
-                    console.warn('[AI News Hub] Failed to fetch ' + feed.name + ':', err.message);
-                    return { feed: feed, articles: [], error: err.message };
-                });
+        // Build array of deferred tasks (functions that return promises)
+        var rssTasks = rssFeeds.map(function(feed) {
+            return function() {
+                return self.fetchFeedXml(feed.url)
+                    .then(function(xml) {
+                        return { feed: feed, articles: self.parseFeed(xml, feed) };
+                    })
+                    .catch(function(err) {
+                        console.warn('[AI News Hub] Failed to fetch ' + feed.name + ':', err.message);
+                        return { feed: feed, articles: [], error: err.message };
+                    });
+            };
         });
 
         // Fetch social feeds with cascade (runs in parallel with RSS feeds)
         var socialPromise = self.fetchSocialFeeds();
 
         return Promise.all([
-            Promise.allSettled(rssPromises),
+            self._runWithConcurrency(rssTasks, concurrency),
             socialPromise
         ]).then(function(results) {
             var rssResults = results[0];
