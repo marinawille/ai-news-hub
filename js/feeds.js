@@ -45,27 +45,13 @@ window.FeedService = {
     },
 
     /**
-     * Fetches a single RSS feed, trying each CORS proxy on failure.
+     * Fetches a single RSS feed via one CORS proxy (round-robin).
+     * No retry — feeds are distributed across proxies for speed.
      */
     fetchFeedXml: function(feedUrl) {
-        var self = this;
-        var proxies = CONFIG.CORS_PROXIES;
-        var attempts = proxies.length;
-
-        function tryProxy(attempt) {
-            if (attempt >= attempts) {
-                return Promise.reject(new Error('All proxies failed for ' + feedUrl));
-            }
-
-            var proxiedUrl = self.getProxiedUrl(feedUrl);
-            self.nextProxy();
-
-            return self.fetchWithTimeout(proxiedUrl).catch(function() {
-                return tryProxy(attempt + 1);
-            });
-        }
-
-        return tryProxy(0);
+        var proxiedUrl = this.getProxiedUrl(feedUrl);
+        this.nextProxy();
+        return this.fetchWithTimeout(proxiedUrl);
     },
 
     /**
@@ -493,9 +479,10 @@ window.FeedService = {
     /**
      * Runs an array of promise-returning functions with limited concurrency.
      * At most `limit` tasks run at the same time.
+     * Optional `onTaskDone` callback fires after each task settles.
      * Returns Promise<Array<{ status, value?, reason? }>> (allSettled style).
      */
-    _runWithConcurrency: function(tasks, limit) {
+    _runWithConcurrency: function(tasks, limit, onTaskDone) {
         var results = new Array(tasks.length);
         var running = 0;
         var nextIndex = 0;
@@ -514,6 +501,9 @@ window.FeedService = {
                             })
                             .then(function() {
                                 running--;
+                                if (onTaskDone) {
+                                    try { onTaskDone(results[i]); } catch(e) {}
+                                }
                                 if (nextIndex >= tasks.length && running === 0) {
                                     resolve(results);
                                 } else {
@@ -531,12 +521,14 @@ window.FeedService = {
 
     /**
      * Fetches all configured feeds (RSS + social) with limited concurrency.
+     * Optional `onProgress` callback receives accumulated articles as each feed resolves.
      * Returns { articles: [...], failedFeeds: [...] }
      */
-    fetchAllFeeds: function() {
+    fetchAllFeeds: function(onProgress) {
         var self = this;
         var rssFeeds = CONFIG.FEEDS;
-        var concurrency = CONFIG.SETTINGS.feedConcurrency || 6;
+        var concurrency = CONFIG.SETTINGS.feedConcurrency || 10;
+        var partialArticles = [];
 
         // Build array of deferred tasks (functions that return promises)
         var rssTasks = rssFeeds.map(function(feed) {
@@ -546,7 +538,7 @@ window.FeedService = {
                         return { feed: feed, articles: self.parseFeed(xml, feed) };
                     })
                     .catch(function(err) {
-                        console.warn('[AI News Hub] Failed to fetch ' + feed.name + ':', err.message);
+                        console.warn('[AI News Hub] Failed: ' + feed.name + ' (' + err.message + ')');
                         return { feed: feed, articles: [], error: err.message };
                     });
             };
@@ -555,8 +547,16 @@ window.FeedService = {
         // Fetch social feeds with cascade (runs in parallel with RSS feeds)
         var socialPromise = self.fetchSocialFeeds();
 
+        // Progressive callback: accumulate articles and notify caller
+        function handleTaskDone(result) {
+            if (result && result.status === 'fulfilled' && !result.value.error && result.value.articles.length > 0) {
+                partialArticles = partialArticles.concat(result.value.articles);
+                if (onProgress) onProgress(partialArticles);
+            }
+        }
+
         return Promise.all([
-            self._runWithConcurrency(rssTasks, concurrency),
+            self._runWithConcurrency(rssTasks, concurrency, handleTaskDone),
             socialPromise
         ]).then(function(results) {
             var rssResults = results[0];

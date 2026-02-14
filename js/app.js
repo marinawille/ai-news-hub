@@ -175,6 +175,8 @@ window.App = {
 
     /**
      * Fetches all feeds, processes, caches, and renders.
+     * On cold load (showLoadingState=true), uses progressive rendering
+     * to show articles as each feed resolves instead of waiting for all 38.
      */
     refreshFeeds: function(showLoadingState) {
         var self = this;
@@ -187,7 +189,25 @@ window.App = {
         }
         UI.setRefreshing(true);
 
-        FeedService.fetchAllFeeds().then(function(result) {
+        var loadingHidden = false;
+
+        // Progressive rendering: show articles as feeds resolve (only on initial cold load)
+        var onProgress = showLoadingState ? function(partialArticles) {
+            if (partialArticles.length === 0) return;
+            var articles = self.deduplicateArticles(partialArticles);
+            articles = self.categorizeArticles(articles);
+            articles = self.enrichWithRecency(articles);
+            articles = self.sortArticles(articles);
+            self._state.allArticles = articles;
+            self.applyFilters();
+
+            if (!loadingHidden) {
+                UI.hideLoading();
+                loadingHidden = true;
+            }
+        } : null;
+
+        FeedService.fetchAllFeeds(onProgress).then(function(result) {
             var articles = result.articles;
 
             if (articles.length === 0) {
@@ -211,7 +231,7 @@ window.App = {
                     );
                 }
             } else {
-                // Success (possibly partial)
+                // Final render with complete data
                 var previousCount = self._state.allArticles.length;
 
                 articles = self.deduplicateArticles(articles);
@@ -247,7 +267,6 @@ window.App = {
                 });
 
                 if (!showLoadingState) {
-                    // Smart toast: show how many new articles were found
                     var newCount = articles.length - previousCount;
                     if (newCount > 0) {
                         UI.showToast(newCount + ' nova(s) noticia(s) encontrada(s)!', 'success');

@@ -552,8 +552,8 @@ window.CONFIG = {
         maxArticlesPerFeed: 15,
         maxTotalArticles: 400,
         searchDebounceMs: 300,
-        fetchTimeoutMs: 5000,                // 5 seconds per fetch
-        feedConcurrency: 6,                  // max simultaneous feed fetches
+        fetchTimeoutMs: 3000,                // 3 seconds per fetch
+        feedConcurrency: 10,                 // max simultaneous feed fetches
         cacheKeyArticles: 'ainewshub_articles',
         cacheKeyTimestamp: 'ainewshub_timestamp',
         cacheKeyTheme: 'ainewshub_theme',
